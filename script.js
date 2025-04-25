@@ -31,7 +31,6 @@ async function fetchLocationData(lat, lon) {
             throw new Error(`Error HTTP: ${response.status}`);
         }
         let data = await response.json();
-        // console.log('data', data);
         data = data.responses;
         if (data) {
             return data;
@@ -43,10 +42,6 @@ async function fetchLocationData(lat, lon) {
 }
 
 // Funció per generar 4 llocs vàlids
-function wait(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
 async function generateLocations() {
     locations = [];
 
@@ -83,7 +78,7 @@ async function generateLocations() {
         alert('No s’han pogut trobar 4 llocs vàlids. Torna-ho a provar.');
     }
 
-    // No afegim marcadors aquí, ara s'afegiran incrementalment
+    console.log('Ubicacions generades:', locations); // Depuració
 }
 
 // Funció per barrejar un array (algoritme de Fisher-Yates)
@@ -151,11 +146,20 @@ function deselectAllCards() {
 // Funció per comprovar si hi ha coincidència
 function checkMatch() {
     const selectedIndices = selectedCards.map(card => card.dataset.locationIndex);
+    const selectedInfoTypes = selectedCards.map(card => card.dataset.infoType);
 
-    // Comprovar si totes les cartes seleccionades pertanyen al mateix lloc
+    // Obtenir les ubicacions corresponents a les cartes seleccionades
+    const selectedLocations = selectedIndices.map(index => locations[index]);
+
+    // Comprovar si totes les cartes comparteixen alguna propietat comuna:
+    // - Mateixa ubicació (totes les cartes pertanyen al mateix lloc)
+    // - Mateixa provincia
+    // - Mateixa capital de comarca
     const allSameLocation = selectedIndices.every(index => index === selectedIndices[0]);
+    const allSameProvince = selectedLocations.every(loc => loc.provincia === selectedLocations[0].provincia);
+    const allSameComarca = selectedLocations.every(loc => loc.comarca === selectedLocations[0].comarca);
 
-    if (allSameLocation) {
+    if (allSameLocation || allSameProvince || allSameComarca) {
         alert('Coincidència trobada!');
         score += 10;
         updateScore();
@@ -186,7 +190,7 @@ function checkMatch() {
 
     if (lives === 0) {
         alert('Has perdut! Juga de nou.');
-        resetGame();
+        resetGame(); // Reiniciar el joc quan es perdi
     }
 }
 
@@ -219,6 +223,7 @@ function resetGame() {
         });
     }
 
+    // Generar noves ubicacions i cartes
     generateLocations().then(() => generateCards());
 }
 
@@ -251,46 +256,6 @@ function addMarkerToMap(location) {
         .setLngLat([lon, lat])
         .setPopup(new maplibregl.Popup().setText(location.name)) // Mostrar el nom al fer clic
         .addTo(map);
-}
-
-// Modificar la funció generateLocations per incloure coordenades als llocs
-async function generateLocations() {
-    locations = [];
-
-    let tries = 0;
-    const maxTries = 100;
-
-    while (locations.length < 4 && tries < maxTries) {
-        const { lat, lon } = getRandomCoordinates();
-
-        const locationData = await fetchLocationData(lat, lon);
-
-        if (
-            locationData &&
-            locationData.features &&
-            locationData.features.length > 0
-        ) {
-            const props = locationData.features[0].properties;
-            if (props.CAPMUNI && props.CAPCOMAR && props.AREAM5000 && props.CAPPROV) {
-                locations.push({
-                    name: props.CAPMUNI || 'Desconegut',
-                    comarca: props.CAPCOMAR || 'N/A',
-                    superficie: props.AREAM5000 || 'N/A',
-                    provincia: props.CAPPROV || 'N/A',
-                    lat: lat, // Afegir latitud
-                    lon: lon  // Afegir longitud
-                });
-            }
-        }
-
-        tries++;
-    }
-
-    if (locations.length < 4) {
-        alert('No s’han pogut trobar 4 llocs vàlids. Torna-ho a provar.');
-    }
-
-
 }
 
 // Inicialització del mapa quan es carrega la pàgina
