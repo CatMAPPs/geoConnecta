@@ -4,6 +4,7 @@ let locations = [];
 let selectedCards = [];
 let lives = 3;
 let score = 0;
+let discoveredLocations = []; // Array per emmagatzemar les ubicacions descobertes
 
 // Bounding box de Catalunya (coordenades mínimes i màximes)
 const catalunyaBoundingBox = {
@@ -55,9 +56,6 @@ async function generateLocations() {
     while (locations.length < 4 && tries < maxTries) {
         const { lat, lon } = getRandomCoordinates();
 
-        // Espera de 300 ms entre cada fetch
-        // await wait(100);
-
         const locationData = await fetchLocationData(lat, lon);
 
         if (
@@ -71,7 +69,9 @@ async function generateLocations() {
                     name: props.CAPMUNI || 'Desconegut',
                     comarca: props.CAPCOMAR || 'N/A',
                     superficie: props.AREAM5000 || 'N/A',
-                    provincia: props.CAPPROV || 'N/A'
+                    provincia: props.CAPPROV || 'N/A',
+                    lat: lat, // Afegir latitud
+                    lon: lon  // Afegir longitud
                 });
             }
         }
@@ -82,6 +82,8 @@ async function generateLocations() {
     if (locations.length < 4) {
         alert('No s’han pogut trobar 4 llocs vàlids. Torna-ho a provar.');
     }
+
+    // No afegim marcadors aquí, ara s'afegiran incrementalment
 }
 
 // Funció per barrejar un array (algoritme de Fisher-Yates)
@@ -158,6 +160,16 @@ function checkMatch() {
         score += 10;
         updateScore();
 
+        // Obtenir l'ubicació encertada
+        const matchedLocationIndex = selectedIndices[0];
+        const matchedLocation = locations[matchedLocationIndex];
+
+        // Afegir l'ubicació a les ubicacions descobertes (si no hi és ja)
+        if (!discoveredLocations.some(loc => loc.name === matchedLocation.name)) {
+            discoveredLocations.push(matchedLocation);
+            addMarkerToMap(matchedLocation); // Afegir el marcador al mapa
+        }
+
         // Desactivar les cartes correctes
         selectedCards.forEach(card => {
             card.style.backgroundColor = '#4caf50';
@@ -194,10 +206,98 @@ function updateScore() {
 function resetGame() {
     lives = 3;
     score = 0;
+    discoveredLocations = []; // Buidar les ubicacions descobertes
     updateLives();
     updateScore();
+
+    // Esborrar tots els marcadors del mapa
+    if (map) {
+        map.eachLayer(layer => {
+            if (layer instanceof maplibregl.Marker) {
+                layer.remove(); // Eliminar el marcador
+            }
+        });
+    }
+
     generateLocations().then(() => generateCards());
 }
+
+// Variables globals per al mapa
+let map;
+
+// Funció per inicialitzar el mapa
+function initializeMap() {
+    // Crear el mapa centrat a Catalunya
+    map = new maplibregl.Map({
+        container: 'map', // ID del contenidor del mapa
+        style: 'https://geoserveis.icgc.cat/contextmaps/icgc_mapa_estandard_general.json', // Estil bàsic de MapLibre
+        center: [1.7, 41.6], // Coordenades centrals de Catalunya
+        zoom: 7, // Nivell de zoom inicial
+        attributionControl: false // Desactivar el control de crèdits
+    });
+
+    // Afegir controls al mapa (zoom i rotació)
+    map.addControl(new maplibregl.NavigationControl());
+}
+
+// Funció per afegir un marcador al mapa
+function addMarkerToMap(location) {
+    // Convertir les coordenades de string a números
+    const lon = parseFloat(location.lon);
+    const lat = parseFloat(location.lat);
+
+    // Crear un marcador per a l'ubicació
+    new maplibregl.Marker()
+        .setLngLat([lon, lat])
+        .setPopup(new maplibregl.Popup().setText(location.name)) // Mostrar el nom al fer clic
+        .addTo(map);
+}
+
+// Modificar la funció generateLocations per incloure coordenades als llocs
+async function generateLocations() {
+    locations = [];
+
+    let tries = 0;
+    const maxTries = 100;
+
+    while (locations.length < 4 && tries < maxTries) {
+        const { lat, lon } = getRandomCoordinates();
+
+        const locationData = await fetchLocationData(lat, lon);
+
+        if (
+            locationData &&
+            locationData.features &&
+            locationData.features.length > 0
+        ) {
+            const props = locationData.features[0].properties;
+            if (props.CAPMUNI && props.CAPCOMAR && props.AREAM5000 && props.CAPPROV) {
+                locations.push({
+                    name: props.CAPMUNI || 'Desconegut',
+                    comarca: props.CAPCOMAR || 'N/A',
+                    superficie: props.AREAM5000 || 'N/A',
+                    provincia: props.CAPPROV || 'N/A',
+                    lat: lat, // Afegir latitud
+                    lon: lon  // Afegir longitud
+                });
+            }
+        }
+
+        tries++;
+    }
+
+    if (locations.length < 4) {
+        alert('No s’han pogut trobar 4 llocs vàlids. Torna-ho a provar.');
+    }
+
+
+}
+
+// Inicialització del mapa quan es carrega la pàgina
+document.addEventListener('DOMContentLoaded', () => {
+    initializeMap();
+    resetGame();
+});
 
 // Inicialització del joc
 document.getElementById('shuffleButton').addEventListener('click', resetGame);

@@ -1,11 +1,26 @@
 <!DOCTYPE html>
 <html lang="ca">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GeoConnections</title>
     <link rel="stylesheet" href="styles.css">
+    <!-- Incloure MapLibre GL JS -->
+    <link href="https://unpkg.com/maplibre-gl/dist/maplibre-gl.css" rel="stylesheet">
+    <script src="https://unpkg.com/maplibre-gl/dist/maplibre-gl.js"></script>
+    <style>
+        /* Estil per al mapa */
+        #map {
+            width: 100%;
+            height: 300px;
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+    </style>
 </head>
+
 <body>
     <header>
         <h1>GeoConnections</h1>
@@ -25,8 +40,12 @@
             <p>Vides restants: <span id="lives">❤️ ❤️ ❤️</span></p>
             <p>Puntuació: <span id="score">0</span></p>
         </div>
+
+        <!-- Contenidor per al mapa -->
+        <div id="map"></div>
     </main>
 
     <script src="script.js"></script>
 </body>
+
 </html>
