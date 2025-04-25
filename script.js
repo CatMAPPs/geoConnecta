@@ -30,11 +30,8 @@ async function fetchLocationData(lat, lon) {
         if (!response.ok) {
             throw new Error(`Error HTTP: ${response.status}`);
         }
-        let data = await response.json();
-        data = data.responses;
-        if (data) {
-            return data;
-        }
+        const data = await response.json();
+        return data.responses; // Retornar directament les dades vàlides
     } catch (error) {
         console.error('Error al carregar les dades:', error);
         return null;
@@ -76,6 +73,7 @@ async function generateLocations() {
 
     if (locations.length < 4) {
         alert('No s’han pogut trobar 4 llocs vàlids. Torna-ho a provar.');
+        resetGame(); // Reiniciar el joc si no es troben ubicacions vàlides
     }
 
     console.log('Ubicacions generades:', locations); // Depuració
@@ -180,6 +178,12 @@ function checkMatch() {
             card.style.color = 'white';
             card.removeEventListener('click', selectCard);
         });
+
+        // Comprovar si s'han descobert totes les ubicacions
+        if (discoveredLocations.length === 4) {
+            alert('Enhorabona! Has completat el joc!');
+            resetGame(); // Reiniciar el joc automàticament
+        }
     } else {
         alert('No coincideixen!');
         lives--;
